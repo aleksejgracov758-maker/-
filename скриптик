@@ -1,0 +1,297 @@
+-- NOVA MENU | Roblox Studio
+-- Place in StarterPlayer > StarterPlayerScripts > LocalScript
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Remove old menu
+local oldGui = playerGui:FindFirstChild("NOVATest")
+if oldGui then
+    oldGui:Destroy()
+end
+
+-- Main GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "NOVATest"
+gui.ResetOnSpawn = false
+gui.Parent = playerGui
+
+local function corner(object, radius)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, radius)
+    c.Parent = object
+end
+
+local main = Instance.new("Frame")
+main.Name = "Main"
+main.Size = UDim2.fromOffset(320, 210)
+main.Position = UDim2.new(0.5, -160, 0.5, -105)
+main.BackgroundColor3 = Color3.fromRGB(22, 22, 35)
+main.BorderSizePixel = 0
+main.Parent = gui
+corner(main, 12)
+
+local outline = Instance.new("UIStroke")
+outline.Color = Color3.fromRGB(110, 100, 255)
+outline.Thickness = 2
+outline.Parent = main
+
+-- Header
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 45)
+header.BackgroundColor3 = Color3.fromRGB(35, 32, 58)
+header.BorderSizePixel = 0
+header.Active = true
+header.Parent = main
+corner(header, 12)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -100, 1, 0)
+title.Position = UDim2.fromOffset(12, 0)
+title.BackgroundTransparency = 1
+title.Text = "NOVA MENU"
+title.TextColor3 = Color3.fromRGB(155, 160, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+local function createButton(parent, text, size, position)
+    local button = Instance.new("TextButton")
+    button.Size = size
+    button.Position = position
+    button.BackgroundColor3 = Color3.fromRGB(43, 43, 64)
+    button.TextColor3 = Color3.new(1, 1, 1)
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 13
+    button.Text = text
+    button.Parent = parent
+    corner(button, 6)
+    return button
+end
+
+local minimize = createButton(
+    header, "-", UDim2.fromOffset(30, 30),
+    UDim2.new(1, -72, 0, 7)
+)
+
+local close = createButton(
+    header, "X", UDim2.fromOffset(30, 30),
+    UDim2.new(1, -36, 0, 7)
+)
+
+-- ESP toggle
+local espEnabled = false
+local highlights = {}
+
+local espButton = createButton(
+    main,
+    "ESP PLAYERS  [OFF]",
+    UDim2.new(1, -24, 0, 40),
+    UDim2.fromOffset(12, 65)
+)
+
+espButton.Activated:Connect(function()
+    espEnabled = not espEnabled
+
+    espButton.Text = "ESP PLAYERS  " ..
+        (espEnabled and "[ON]" or "[OFF]")
+
+    espButton.BackgroundColor3 = espEnabled
+        and Color3.fromRGB(70, 60, 135)
+        or Color3.fromRGB(43, 43, 64)
+
+    for _, target in ipairs(Players:GetPlayers()) do
+        if target ~= player and target.Character then
+            local highlight = highlights[target]
+
+            if espEnabled then
+                if not highlight or not highlight.Parent then
+                    highlight = Instance.new("Highlight")
+                    highlight.Name = "NOVAHighlight"
+                    highlight.FillColor = Color3.fromRGB(100, 80, 255)
+                    highlight.OutlineColor = Color3.fromRGB(100, 220, 255)
+                    highlight.FillTransparency = 0.65
+                    highlight.DepthMode =
+                        Enum.HighlightDepthMode.AlwaysOnTop
+                    highlight.Adornee = target.Character
+                    highlight.Parent = target.Character
+
+                    highlights[target] = highlight
+                else
+                    highlight.Adornee = target.Character
+                    highlight.Enabled = true
+                end
+            else
+                if highlight then
+                    highlight:Destroy()
+                    highlights[target] = nil
+                end
+            end
+        end
+    end
+end)
+
+-- Restore button
+local restore = createButton(
+    gui,
+    "✦ NOVA",
+    UDim2.fromOffset(120, 42),
+    UDim2.new(0, 15, 0.5, 0)
+)
+restore.Visible = false
+
+minimize.Activated:Connect(function()
+    main.Visible = false
+    restore.Visible = true
+end)
+
+restore.Activated:Connect(function()
+    main.Visible = true
+    restore.Visible = false
+end)
+
+close.Activated:Connect(function()
+    gui:Destroy()
+end)
+
+-- FPS window
+local fpsFrame = Instance.new("Frame")
+fpsFrame.Size = UDim2.fromOffset(145, 42)
+fpsFrame.Position = UDim2.new(1, -160, 0, 15)
+fpsFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 35)
+fpsFrame.Active = true
+fpsFrame.Parent = gui
+corner(fpsFrame, 8)
+
+local fpsStroke = Instance.new("UIStroke")
+fpsStroke.Color = Color3.fromRGB(100, 100, 220)
+fpsStroke.Parent = fpsFrame
+
+local fpsLabel = Instance.new("TextLabel")
+fpsLabel.Size = UDim2.fromScale(1, 1)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.Text = "FPS: --"
+fpsLabel.TextColor3 = Color3.fromRGB(100, 230, 160)
+fpsLabel.Font = Enum.Font.GothamBold
+fpsLabel.TextSize = 16
+fpsLabel.Parent = fpsFrame
+
+local frameCount = 0
+local elapsed = 0
+
+local fpsConnection = RunService.RenderStepped:Connect(function(dt)
+    frameCount += 1
+    elapsed += dt
+
+    if elapsed >= 0.5 then
+        local fps = math.round(frameCount / elapsed)
+
+        fpsLabel.Text = "FPS: " .. fps
+
+        if fps >= 55 then
+            fpsLabel.TextColor3 = Color3.fromRGB(100, 230, 160)
+        elseif fps >= 30 then
+            fpsLabel.TextColor3 = Color3.fromRGB(255, 200, 80)
+        else
+            fpsLabel.TextColor3 = Color3.fromRGB(255, 90, 100)
+        end
+
+        frameCount = 0
+        elapsed = 0
+    end
+end)
+
+-- Player lifecycle
+local function setupPlayer(target)
+    if target == player then
+        return
+    end
+
+    target.CharacterAdded:Connect(function(character)
+        task.wait(1)
+
+        if espEnabled then
+            local old = highlights[target]
+
+            if old then
+                old:Destroy()
+            end
+
+            local h = Instance.new("Highlight")
+            h.Name = "NOVAHighlight"
+            h.FillColor = Color3.fromRGB(100, 80, 255)
+            h.OutlineColor = Color3.fromRGB(100, 220, 255)
+            h.FillTransparency = 0.65
+            h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            h.Adornee = character
+            h.Parent = character
+
+            highlights[target] = h
+        end
+    end)
+end
+
+for _, target in ipairs(Players:GetPlayers()) do
+    setupPlayer(target)
+end
+
+Players.PlayerAdded:Connect(setupPlayer)
+
+Players.PlayerRemoving:Connect(function(target)
+    if highlights[target] then
+        highlights[target]:Destroy()
+        highlights[target] = nil
+    end
+end)
+
+-- Dragging windows
+local function makeDraggable(frame, handle)
+    local dragging = false
+    local dragStart
+    local startPosition
+
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+
+            dragging = true
+            dragStart = input.Position
+            startPosition = frame.Position
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (
+            input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch
+        ) then
+
+            local delta = input.Position - dragStart
+
+            frame.Position = UDim2.new(
+                startPosition.X.Scale,
+                startPosition.X.Offset + delta.X,
+                startPosition.Y.Scale,
+                startPosition.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+
+makeDraggable(main, header)
+makeDraggable(fpsFrame, fpsFrame)
+makeDraggable(restore, restore)
+
+print("[NOVA] Menu loaded successfully!")
